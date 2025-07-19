@@ -1,9 +1,10 @@
 const User = require('../models/User');
+const { sendOTPEmail } = require('../utils/emailService');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
-    const { email, phoneNumber, password } = req.body;
+    const { email, phone, password } = req.body;
 
     if (!email && !phone) {
         return res.status(400).json({ message: 'Email veya telefon gerekli.' });
@@ -17,17 +18,158 @@ exports.register = async (req, res) => {
             return res.status(409).json({ message: 'Kullanıcı zaten var.' });
 
         const passwordHash = await bcrypt.hash(password, 10);
-        const newUser = new User({ email, phone, password: passwordHash });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
+
+        const newUser = new User({
+            email,
+            phone,
+            password: passwordHash,
+            otp: phone ? null : otp,
+            otpExpiresAt: phone ? null : otpExpiresAt,
+        });
         await newUser.save();
 
-        const token = generateToken(newUser);
+        email && (await sendOTPEmail(email, otp));
+
         res.status(201).json({
-            token,
-            message: 'Kullanıcı başarıyla kaydedildi.',
+            message: email
+                ? 'Mail adresine OTP gönderildi. (Spam kutunuzu kontrol ediniz)'
+                : 'Kullanıcı başarıyla kaydedildi.',
         });
     } catch (err) {
-        res.status(500).json({ message: 'Sunucu hatası', error: err });
+        res.status(500).json({ message: 'Sunucu hatası', error: err.message });
     }
 };
 
-exports.login = async (req, res) => {};
+exports.verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res
+                .status(404)
+                .json({ success: false, error: 'Kullanıcı bulunamadı.' });
+        }
+
+        if (user.isVerified) {
+            return res
+                .status(400)
+                .json({ success: false, error: 'Doğrulanmış kullanıcı' });
+        }
+
+        if (user.otp !== otp || user.otpExpiresAt < new Date()) {
+            return res.status(400).json({
+                success: false,
+                error: 'OTP geçersiz veya süresi dolmuş.',
+            });
+        }
+
+        user.isVerified = true;
+        user.otp = undefined;
+        user.otpExpiresAt = undefined;
+        await user.save();
+
+        res.status(200).json({ success: true, message: 'Kayıt tamamlandı.' });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: 'Doğrulama hatası',
+        });
+    }
+};
+
+exports.resendRegisterOtp = async (req, res) => {
+    const email = req.body.email;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email gerekli.' });
+    }
+
+    try {
+        const existUser = await User.findOne({ email });
+
+        if (!existUser) {
+            return res
+                .status(404)
+                .json({ success: false, error: 'Kullanıcı bulunamadı.' });
+        }
+
+        if (existUser.otp && existUser.otpExpiresAt > new Date()) {
+            return res
+                .status(404)
+                .json({ success: false, error: 'Mevcut OTP hala geçerli.' });
+        }
+
+        if (existUser.isVerified) {
+            return res
+                .status(404)
+                .json({ success: false, error: 'Doğrulanmış kullanıcı.' });
+        }
+
+        if (!existUser.otp || !existUser.otpExpiresAt) {
+            return res.status(404).json({
+                success: false,
+                error: 'OTP işlemi bulunamadı. Lütfen OTP gerektiren bir işlem başlatın',
+            });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
+
+        existUser.otp = otp;
+        existUser.otpExpiresAt = otpExpiresAt;
+        await existUser.save();
+
+        res.status(201).json({
+            message:
+                'Mail adresine OTP gönderildi. (Spam kutunuzu kontrol ediniz)',
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Sunucu hatası', error: err.message });
+    }
+};
+
+exports.login = async (req, res) => {
+    const { email, phone, password } = req.body;
+
+    if (!email && !phone) {
+        return res.status(400).json({ message: 'Email veya telefon gerekli.' });
+    }
+
+    try {
+        const user = await User.findOne({
+            $or: [email ? { email } : null, phone ? { phone } : null].filter(
+                Boolean
+            ),
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Şifre hatalı.' });
+        }
+
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: '7d',
+        });
+
+        res.status(200).json({
+            token,
+            user: {
+                _id: user._id,
+                username: user.username,
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone,
+            },
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Sunucu hatası', error: err.message });
+    }
+};
