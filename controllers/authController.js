@@ -15,29 +15,44 @@ exports.register = async (req, res) => {
             $or: [{ email }, { phone }],
         });
         if (existingUser)
-            return res.status(409).json({ message: 'Kullanıcı zaten var.' });
+            return res
+                .status(409)
+                .json({ message: 'Kullanıcı zaten kayıtlı.' });
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
+        if (email) {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
-        const newUser = new User({
-            email,
-            phone,
-            password: passwordHash,
-            otp: phone ? null : otp,
-            otpExpiresAt: phone ? null : otpExpiresAt,
-        });
-        await newUser.save();
+            const newUser = new User({
+                email,
+                phone,
+                password: passwordHash,
+                otp: phone ? null : otp,
+                otpExpiresAt: phone ? null : otpExpiresAt,
+            });
+            await newUser.save();
 
-        email && (await sendOTPEmail(email, otp));
+            email && (await sendOTPEmail(email, otp));
 
-        res.status(201).json({
-            message: email
-                ? 'Mail adresine OTP gönderildi. (Spam kutunuzu kontrol ediniz)'
-                : 'Kullanıcı başarıyla kaydedildi.',
-        });
+            res.status(201).json({
+                message:
+                    'Mail adresine OTP gönderildi. (Spam kutunuzu kontrol ediniz)',
+            });
+        } else {
+            const newUser = new User({
+                email,
+                phone,
+                password: passwordHash,
+                isVerified: true,
+            });
+            await newUser.save();
+
+            res.status(201).json({
+                message: 'Kullanıcı başarıyla kaydedildi.',
+            });
+        }
     } catch (err) {
         res.status(500).json({ message: 'Sunucu hatası', error: err.message });
     }
@@ -51,19 +66,19 @@ exports.verifyOtp = async (req, res) => {
         if (!user) {
             return res
                 .status(404)
-                .json({ success: false, error: 'Kullanıcı bulunamadı.' });
+                .json({ success: false, message: 'Kullanıcı bulunamadı.' });
         }
 
         if (user.isVerified) {
             return res
                 .status(400)
-                .json({ success: false, error: 'Doğrulanmış kullanıcı' });
+                .json({ success: false, message: 'Doğrulanmış kullanıcı.' });
         }
 
         if (user.otp !== otp || user.otpExpiresAt < new Date()) {
             return res.status(400).json({
                 success: false,
-                error: 'OTP geçersiz veya süresi dolmuş.',
+                message: 'OTP geçersiz veya süresi dolmuş.',
             });
         }
 
@@ -74,9 +89,10 @@ exports.verifyOtp = async (req, res) => {
 
         res.status(200).json({ success: true, message: 'Kayıt tamamlandı.' });
     } catch (err) {
+        console.log(err);
         res.status(500).json({
             success: false,
-            error: 'Doğrulama hatası',
+            message: 'Doğrulama hatası.',
         });
     }
 };
@@ -94,25 +110,26 @@ exports.resendRegisterOtp = async (req, res) => {
         if (!existUser) {
             return res
                 .status(404)
-                .json({ success: false, error: 'Kullanıcı bulunamadı.' });
+                .json({ success: false, message: 'Kullanıcı bulunamadı.' });
         }
 
         if (existUser.otp && existUser.otpExpiresAt > new Date()) {
             return res
                 .status(404)
-                .json({ success: false, error: 'Mevcut OTP hala geçerli.' });
+                .json({ success: false, message: 'Mevcut OTP hala geçerli.' });
         }
 
         if (existUser.isVerified) {
             return res
                 .status(404)
-                .json({ success: false, error: 'Doğrulanmış kullanıcı.' });
+                .json({ success: false, message: 'Doğrulanmış kullanıcı.' });
         }
 
         if (!existUser.otp || !existUser.otpExpiresAt) {
             return res.status(404).json({
                 success: false,
-                error: 'OTP işlemi bulunamadı. Lütfen OTP gerektiren bir işlem başlatın',
+                message:
+                    'OTP işlemi bulunamadı. Lütfen OTP gerektiren bir işlem başlatın.',
             });
         }
 
