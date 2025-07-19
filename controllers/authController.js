@@ -11,9 +11,12 @@ exports.register = async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({
-            $or: [{ email }, { phone }],
-        });
+        const orQuery = [];
+        if (email) orQuery.push({ email });
+        if (phone) orQuery.push({ phone });
+
+        const existingUser = await User.findOne({ $or: orQuery });
+
         if (existingUser)
             return res
                 .status(409)
