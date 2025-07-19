@@ -13,7 +13,7 @@ const register = (otp) => {
             <p>Kayıt işleminizi tamamlamak için aşağıdaki OTP kodunu kullanın:</p>
             <h3 style="color: #2c3e50;">${otp}</h3>
             <p>Bu kod 3 dakika boyunca geçerlidir.</p>
-            <<p>MyLinkHub Ekibi</p>
+            <p>MyLinkHub Ekibi</p>
         `;
 };
 
