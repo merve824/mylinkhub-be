@@ -1,0 +1,29 @@
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const connectDB = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
+
+const BASE_ENDPOINT = '/api/v1';
+
+app.use(`${BASE_ENDPOINT}/auth`, authRoutes);
+
+app.get(BASE_ENDPOINT, (req, res) => {
+    res.json({ message: 'Welcome to the MyLinkHub API!' });
+});
+
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        const now = new Date();
+        const time = now.toLocaleString('tr-TR');
+        console.log(`${time}\tSunucu ${PORT} portunda çalışıyor...`);
+    });
+});
