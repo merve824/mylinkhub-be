@@ -102,6 +102,73 @@ exports.getUserProfileByUsername = async (req, res) => {
     }
 };
 
+exports.addLink = async (req, res) => {
+    const { key, value } = req.body;
+
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user || user.isFrozen || user.isDeleted) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+        }
+
+        user.socialLinks[key] = value;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Link eklendi.',
+            socialLinks: user.socialLinks,
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.updateLink = async (req, res) => {
+    const { key, value } = req.body;
+
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user || user.isFrozen || user.isDeleted) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+        }
+
+        user.socialLinks[key] = value;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Link güncellendi.',
+            socialLinks: user.socialLinks,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.deleteLink = async (req, res) => {
+    const { key } = req.params;
+
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user || user.isFrozen || user.isDeleted) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+        }
+
+        user.socialLinks[key] = '';
+        await user.save();
+
+        res.status(200).json({
+            message: 'Link silindi.',
+            socialLinks: user.socialLinks,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
 exports.getAccountDetails = async (req, res) => {
     try {
         const user = await User.findById(req.userId).select(

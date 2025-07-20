@@ -14,6 +14,9 @@ router.put(
     verifyToken,
     userController.updateSocialLinks
 );
+router.post('/social-links', verifyToken, userController.addLink);
+router.put('/social-links', verifyToken, userController.updateLink);
+router.delete('/social-links/:key', verifyToken, userController.deleteLink);
 router.get('/social-links', verifyToken, userController.getSocialLinks);
 router.post('/custom-links', verifyToken, userController.addCustomLink);
 router.get('/custom-links', verifyToken, userController.getCustomLinks);
