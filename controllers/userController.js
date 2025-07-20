@@ -210,18 +210,20 @@ exports.createProfile = async (req, res) => {
 
         existingUser.username = username;
         existingUser.email = email || '';
-        existingUser.phone = phone || '';
+        existingUser.phone = phone || undefined;
         existingUser.avatarUrl = avatarUrl || '';
         existingUser.socialLinks = socialLinks || undefined;
         existingUser.backgroundColor = backgroundColor || '';
         existingUser.font = font || '';
         existingUser.fullname = fullname || '';
         existingUser.bio = bio || '';
+        existingUser.preUsername = undefined;
 
         await existingUser.save();
 
         res.status(200).json({ message: 'Profil oluşturuldu.' });
     } catch (err) {
+        console.log(err);
         res.status(500).json({ message: 'Sunucu hatası', error: err.message });
     }
 };
