@@ -23,5 +23,13 @@ router.delete(
     verifyToken,
     userController.deleteCustomLink
 );
+router.put('/frozen', verifyToken, userController.freezeAccount);
+router.delete('/account', verifyToken, userController.deleteAccount);
+router.put(
+    '/background-color',
+    verifyToken,
+    userController.changeBackgroundColor
+);
+router.put('/font', verifyToken, userController.changeFont);
 
 module.exports = router;

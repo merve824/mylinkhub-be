@@ -166,7 +166,7 @@ exports.login = async (req, res) => {
             ),
         });
 
-        if (!user) {
+        if (!user || user.isDeleted) {
             return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
         }
 
@@ -178,6 +178,11 @@ exports.login = async (req, res) => {
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
             expiresIn: '7d',
         });
+
+        if (user.isFrozen) {
+            user.isFrozen = false;
+            await user.save();
+        }
 
         res.status(200).json({
             token,

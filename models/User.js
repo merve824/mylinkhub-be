@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
     otp: { type: String },
     otpExpiresAt: { type: Date },
     isVerified: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    isFrozen: { type: Boolean, default: false },
+    backgroundColor: { type: String },
+    font: { type: String },
     createdAt: { type: Date, default: Date.now },
     socialLinks: {
         personal: String,

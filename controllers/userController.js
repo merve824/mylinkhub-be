@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { fonts } = require('../utils/data');
 
 exports.getUsername = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ exports.getUsername = async (req, res) => {
         res.status(200).json({
             username: existingUser?.username
                 ? existingUser.username
-                : existingUser.fullName,
+                : existingUser.fullname,
         });
     } catch (err) {
         res.status(500).json({ message: 'Sunucu hatası', error: err.message });
@@ -87,11 +88,9 @@ exports.getUserProfileByUsername = async (req, res) => {
     const { username } = req.params;
 
     try {
-        const user = await User.findOne({ username }).select(
-            'username fullName avatarUrl headerUrl bio -_id'
-        );
+        const user = await User.findOne({ username });
 
-        if (!user) {
+        if (!user || user.isFrozen || user.isDeleted) {
             return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
         }
 
@@ -306,7 +305,109 @@ exports.deleteCustomLink = async (req, res) => {
             customLinks: user.customLinks,
         });
     } catch (error) {
-        console.error('Bağlantı silinirken hata:', error);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.freezeAccount = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user || user.isDeleted) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+        }
+
+        if (user.isFrozen) {
+            return res.status(404).json({ message: 'Hesap zaten dondurulmuş' });
+        }
+
+        user.isFrozen = true;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Hesap donduruldu.',
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.deleteAccount = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+        }
+
+        user.isDeleted = true;
+        await user.save();
+
+        res.status(200).json({ message: 'Hesap silindi.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.changeBackgroundColor = async (req, res) => {
+    const { backgroundColor } = req.body;
+    if (!backgroundColor) {
+        return res.status(404).json({ message: 'Eksik veri girdisi.' });
+    }
+
+    if (!backgroundColor.startsWith('#') || backgroundColor.length !== 7) {
+        return res
+            .status(400)
+            .json({ message: 'Geçersiz renk formatı.', backgroundColor });
+    }
+
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+        }
+
+        user.backgroundColor = backgroundColor;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Arka plan rengi güncellendi.',
+            backgroundColor,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.changeFont = async (req, res) => {
+    const { font } = req.body;
+
+    if (!font) {
+        return res.status(404).json({ message: 'Eksik veri girdisi.' });
+    }
+
+    const isInList = fonts.find((item) => item.label === font);
+    if (!isInList) {
+        return res
+            .status(404)
+            .json({ message: 'Geçersiz yazı tipi seçimi.', font });
+    }
+
+    try {
+        const user = await User.findById(req.userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+        }
+        user.font = font;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Yazı tipi güncellendi.',
+            font,
+        });
+    } catch (error) {
         res.status(500).json({ message: 'Sunucu hatası' });
     }
 };
