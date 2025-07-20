@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
     phone: { type: String, unique: true, sparse: true },
     password: { type: String, required: true },
     username: { type: String, unique: true, sparse: true },
+    preUsername: { type: String, sparse: true },
     fullname: { type: String },
     avatarUrl: { type: String },
     headerUrl: { type: String },

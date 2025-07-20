@@ -31,5 +31,6 @@ router.put(
     userController.changeBackgroundColor
 );
 router.put('/font', verifyToken, userController.changeFont);
+router.post('/crerate-profile', userController.createProfile);
 
 module.exports = router;

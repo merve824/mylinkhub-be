@@ -45,7 +45,7 @@ exports.preChooseUsername = async (req, res) => {
             });
         }
 
-        existingUser.username = username;
+        existingUser.preUsername = username;
         await existingUser.save();
 
         res.status(200).json({ message: 'Kullanıcı adı başarıyla seçildi.' });
@@ -88,7 +88,9 @@ exports.getUserProfileByUsername = async (req, res) => {
     const { username } = req.params;
 
     try {
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).select(
+            '-_id -password -isVerified -createdAt -preUsername'
+        );
 
         if (!user || user.isFrozen || user.isDeleted) {
             return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
@@ -113,6 +115,47 @@ exports.getAccountDetails = async (req, res) => {
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ message: 'Sunucu hatası' });
+    }
+};
+
+exports.createProfile = async (req, res) => {
+    const {
+        username,
+        email,
+        phone,
+        avatarUrl,
+        socialLinks,
+        backgroundColor,
+        font,
+        fullname,
+        bio,
+    } = req.body;
+
+    try {
+        const existingUser = await User.findOne({
+            $or: [email ? { email } : null, phone ? { phone } : null].filter(
+                Boolean
+            ),
+        });
+
+        if (!existingUser)
+            return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+
+        existingUser.username = username;
+        existingUser.email = email || '';
+        existingUser.phone = phone || '';
+        existingUser.avatarUrl = avatarUrl || '';
+        existingUser.socialLinks = socialLinks || undefined;
+        existingUser.backgroundColor = backgroundColor || '';
+        existingUser.font = font || '';
+        existingUser.fullname = fullname || '';
+        existingUser.bio = bio || '';
+
+        await existingUser.save();
+
+        res.status(200).json({ message: 'Profil oluşturuldu.' });
+    } catch (err) {
+        res.status(500).json({ message: 'Sunucu hatası', error: err.message });
     }
 };
 
