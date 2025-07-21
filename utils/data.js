@@ -1,4 +1,4 @@
-export const fonts = [
+exports.fonts = [
     { label: 'Poppins' },
     { label: 'Roboto' },
     { label: 'Lato' },

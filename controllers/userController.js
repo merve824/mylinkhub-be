@@ -364,6 +364,8 @@ exports.updateCustomLink = async (req, res) => {
         return res.status(404).json({ message: 'Eksik veri girdisi.' });
     }
 
+    console.log(data);
+
     try {
         const user = await User.findById(req.userId);
 
@@ -372,7 +374,7 @@ exports.updateCustomLink = async (req, res) => {
         }
 
         const existCustomLink = user.customLinks.find(
-            (item) => item._id.toString() === data.id
+            (item) => item._id.toString() == data.id
         );
 
         existCustomLink.title = data.title;

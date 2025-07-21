@@ -6,7 +6,7 @@ const connectDB = async () => {
         await mongoose.connect(MONGO_URI, {});
         const now = new Date();
         const time = now.toLocaleString('tr-TR');
-        console.log(`${time}\tMongoDB bağlantısı başarılı`);
+        console.log(`MongoDB bağlantısı başarılı`);
     } catch (error) {
         const now = new Date();
         const time = now.toLocaleString('tr-TR');
